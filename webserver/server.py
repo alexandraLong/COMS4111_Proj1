@@ -1,5 +1,6 @@
 #!/usr/bin/env python2.7
-
+#hello aaron 
+#this is test
 """
 Columbia W4111 Intro to databases
 Example webserver
@@ -72,7 +73,7 @@ def before_request():
   try:
     g.conn = engine.connect()
   except:
-    print ("uh oh, problem connecting to database")
+    print("uh oh, problem connecting to database")
     import traceback; traceback.print_exc()
     g.conn = None
 
