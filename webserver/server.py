@@ -1,6 +1,14 @@
 #!/usr/bin/env python2.7
+<<<<<<< HEAD
 #hello aaron 
 #this is test
+=======
+
+
+
+#Aaron's test comment!!!!!!!
+
+>>>>>>> 41006314bf9e1057c0c9ccfdd6c6ae43825ecd54
 """
 Columbia W4111 Intro to databases
 Example webserver
