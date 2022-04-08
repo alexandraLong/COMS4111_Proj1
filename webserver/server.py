@@ -58,7 +58,9 @@ engine.execute("""CREATE TABLE IF NOT EXISTS test (
 );""")
 engine.execute("""INSERT INTO test(name) VALUES ('grace hopper'), ('alan turing'), ('ada lovelace');""")
 
-
+@app.route('/')
+def homepage():
+    return render_template('homepage.html')
 
 @app.before_request
 def before_request():
