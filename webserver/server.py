@@ -27,6 +27,7 @@ app = Flask(__name__, template_folder=tmpl_dir)
 #guesses = ["     ","     ","     ","     ","     "]
 num = 0
 error = 0
+user = ""
 
 
 # XXX: The Database URI should be in the format of: 
@@ -94,6 +95,8 @@ def logon():
 
 @app.route('/logout')
 def logout():
+  global user
+  user = ""
   return redirect('/')
 
 @app.route('/homepage')
@@ -144,7 +147,7 @@ def another():
 def addguess():
   global num
   guess = request.form['guessinput']
-  print(guess)
+ # print(guess)
   cmd = 'INSERT INTO guess(numguess,word) VALUES (:numg, :g)';
   g.conn.execute(text(cmd), numg = num, g = guess)
   num += 1
@@ -153,6 +156,7 @@ def addguess():
 @app.route('/login', methods=['POST'])
 def login():
   global error
+  global user
   error = 0
   email = request.form['email']
   password = request.form['password']
@@ -162,7 +166,11 @@ def login():
   for result in cursor:
     passes.append(result['password'])
   cursor.close()
-  if result[0] == password:
+  if len(passes) == 0:
+    error = 3
+    return redirect('/')
+  elif result[0] == password:
+    user = email
     return redirect('/homepage')
   else:
     error = 2
@@ -181,9 +189,9 @@ def signin():
   email = request.form['email']
   password = request.form['password']
   birthday = request.form['birthday']
-  print(email)
-  print(password)
-  print(birthday)
+  #print(email)
+  #print(password)
+  #print(birthday)
   cmd = 'INSERT INTO users(username, password, birthday) VALUES (:user, :passw, :bday)';
   try:
     g.conn.execute(text(cmd), user = email, passw = password, bday = birthday)
@@ -196,16 +204,45 @@ def signin():
 @app.route('/search_users', methods=['POST'])
 def search_users():
   search = request.form['searchbar']
-  cmd = """SELECT username FROM users WHERE username like '%s%'""";
-  cursor = g.conn.execute(text(cmd), search)
-  profiles = []
+  #print(search)
+  query1 = """SELECT username FROM users WHERE username LIKE %s"""
+  cursor = g.conn.execute(query1, '%'+search+'%')
+  profiles = [] 
   for result in cursor:
     profiles.append(result['username'])
   cursor.close()
-  print(profiles)
+  #print(profiles)
   return render_template('searchresults.html', profiles = profiles)
 
+@app.route('/profile/<people>')
+def view(people):
+  #print(people)
+  query2 = """SELECT username, birthday FROM users WHERE username = %s"""
+  cursor = g.conn.execute(query2, people)
+  data = [] 
+  for result in cursor:
+    data.append(result['username'])
+    data.append(result['birthday'])
+  cursor.close()
+  #print(data)
 
+  return render_template('profile.html',data=data)
+  
+@app.route('/follow', methods=['POST'])
+def follow():
+  global user
+  user2 = request.form['val']
+  print(user2)
+  cmd = 'INSERT INTO follows(username,username_2) VALUES (:user1, :usern2)';
+  try:
+    g.conn.execute(text(cmd), user1 = user, usern2 = user2)
+  except Exception as er:
+    print("Cannot insert username")
+    error = 1
+    return redirect('/profile/'+user2)
+  return redirect('/homepage')
+  
+  
 if __name__ == "__main__":
   import click
 
