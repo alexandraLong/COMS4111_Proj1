@@ -18,11 +18,12 @@ Read about it online.
 import os
 from sqlalchemy import *
 from sqlalchemy.pool import NullPool
-from flask import Flask, request, render_template, g, redirect, Response
+from flask import Flask, request, render_template, g, redirect, Response, jsonify
 
 tmpl_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'templates')
 app = Flask(__name__, template_folder=tmpl_dir)
-
+#guesses = ["     ","     ","     ","     ","     "]
+num = 0
 
 
 # XXX: The Database URI should be in the format of: 
@@ -58,9 +59,34 @@ engine.execute("""CREATE TABLE IF NOT EXISTS test (
 );""")
 engine.execute("""INSERT INTO test(name) VALUES ('grace hopper'), ('alan turing'), ('ada lovelace');""")
 
+engine.execute("""DROP TABLE IF EXISTS guess CASCADE;""")
+engine.execute("""CREATE TABLE IF NOT EXISTS guess (
+  numguess int,
+  word text
+);""")
+
+engine.execute("""DROP TABLE IF EXISTS users CASCADE;""")
+engine.execute("""CREATE TABLE IF NOT EXISTS users (
+  username text,
+  password text,
+  birthday date
+);""")
+
 @app.route('/')
+def logon():
+  return render_template('login.html')
+
+@app.route('/homepage')
 def homepage():
-    return render_template('homepage.html')
+  cursor = g.conn.execute("SELECT word FROM guess")
+  guesses = []
+  for result in cursor:
+    guesses.append(result['word'])  # can also be accessed using result[0]
+  cursor.close()
+
+  context = dict(data = guesses)
+
+  return render_template('homepage.html', **context)
 
 @app.before_request
 def before_request():
@@ -103,8 +129,8 @@ def teardown_request(exception):
 # see for routing: http://flask.pocoo.org/docs/0.10/quickstart/#routing
 # see for decorators: http://simeonfranklin.com/blog/2012/jul/1/python-decorators-in-12-steps/
 #
-@app.route('/')
-def index():
+#@app.route('/')
+#def index():
   """
   request is a special object that Flask provides to access web request information:
 
@@ -116,17 +142,18 @@ def index():
   """
 
   # DEBUG: this is debugging code to see what request looks like
-  print(request.args)
+  #print(request.args)
 
 
   #
   # example of a database query
   #
-  cursor = g.conn.execute("SELECT name FROM test")
-  names = []
-  for result in cursor:
-    names.append(result['name'])  # can also be accessed using result[0]
-  cursor.close()
+  #cursor = g.conn.execute("SELECT name FROM test")
+ # guesses = []
+ 
+  #for result in cursor:
+  #  names.append(result['name'])  # can also be accessed using result[0]
+  #cursor.close()
 
   #
   # Flask uses Jinja templates, which is an extension to HTML where you can
@@ -154,14 +181,15 @@ def index():
   #     <div>{{n}}</div>
   #     {% endfor %}
   #
-  context = dict(data = names)
-
+  #context = dict(data = names)
+ 
+  
 
   #
   # render_template looks in the templates/ folder for files.
   # for example, the below file reads template/index.html
   #
-  return render_template("index.html", **context)
+  #return render_template("index.html", **context)
 
 #
 # This is an example of a different path.  You can see it at
@@ -177,19 +205,51 @@ def another():
 
 
 # Example of adding new data to the database
-@app.route('/add', methods=['POST'])
-def add():
-  name = request.form['name']
-  print(name)
-  cmd = 'INSERT INTO test(name) VALUES (:name1), (:name2)';
-  g.conn.execute(text(cmd), name1 = name, name2 = name);
-  return redirect('/')
+#@app.route('/add', methods=['POST'])
+#def add():
+#  name = request.form['name']
+#  print(name)
+# cmd = 'INSERT INTO test(name) VALUES (:name1), (:name2)';
+#  g.conn.execute(text(cmd), name1 = name, name2 = name);
+# return redirect('/')
 
+@app.route('/addguess', methods=['POST'])
+def addguess():
+  global num
+  guess = request.form['guessinput']
+  print(guess)
+  cmd = 'INSERT INTO guess(numguess,word) VALUES (:numg, :g)';
+  g.conn.execute(text(cmd), numg = num, g = guess)
+  num += 1
+  return redirect('/homepage')
 
-@app.route('/login')
+@app.route('/login', methods=['POST'])
 def login():
-    abort(401)
-    this_is_never_executed()
+  email = request.form['email']
+  password = request.form['password']
+  print(email)
+  print(password)
+  defaultbday= '2000-01-01'
+  cmd = 'INSERT INTO users(username, password, birthday) VALUES (:user, :passw, :bday)';
+  g.conn.execute(text(cmd), user = email, passw = password, bday = defaultbday)
+  return redirect('/homepage')
+
+@app.route('/signup')
+def signup():
+  return render_template('signin.html')
+
+@app.route('/signin', methods=['POST'])
+def signin():
+  email = request.form['email']
+  password = request.form['password']
+  birthday = request.form['birthday']
+  print(email)
+  print(password)
+  print(birthday)
+  cmd = 'INSERT INTO users(username, password, birthday) VALUES (:user, :passw, :bday)';
+  g.conn.execute(text(cmd), user = email, passw = password, bday = birthday)
+  return redirect('/homepage')
+  
 
 
 if __name__ == "__main__":
