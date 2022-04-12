@@ -10,9 +10,17 @@
 <body>
     <div class="container">
         <div class="row">
-            <div class="col-lg-12 bottom_row_padding">
-                <div class="top_padding center" id="header"></div>
+            <div class="col-lg-8 bottom_row_padding">
+                <div class="top_padding center" id="header">
+                </div>
                 <b class="white">Guess:</b>
+            </div>
+            <div class="col-lg-4 logout_button">
+                    <form name="Form" action="/">
+                        <input type="submit" value="logout">
+                    </form>
+    
+                </div>
             </div>
         </div>
         <div class="row">
@@ -30,17 +38,6 @@
                         {% endfor %}
                     </div>
                 </div>
-            </div>
-        </div>
-        <div class="row">
-            <div class="col-lg-8">
-                
-            </div>
-            <div class="col-lg-4 logout_button">
-                <form name="Form" action="/">
-                    <input type="submit" value="logout">
-                </form>
-
             </div>
         </div>
 
