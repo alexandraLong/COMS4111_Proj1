@@ -1,4 +1,4 @@
-#!/usr/bin/env python2.7
+ #!/usr/bin/env python2.7
 
 """
 Columbia W4111 Intro to databases
@@ -16,6 +16,8 @@ Read about it online.
 """
 
 import os
+from pydoc import render_doc
+import sqlite3
 from sqlalchemy import *
 from sqlalchemy.pool import NullPool
 from flask import Flask, request, render_template, g, redirect, Response, jsonify
@@ -23,7 +25,9 @@ from flask import Flask, request, render_template, g, redirect, Response, jsonif
 tmpl_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'templates')
 app = Flask(__name__, template_folder=tmpl_dir)
 #guesses = ["     ","     ","     ","     ","     "]
-num = 0
+num = 1
+error = 0
+user = ""
 
 
 # XXX: The Database URI should be in the format of: 
@@ -59,29 +63,62 @@ engine.execute("""CREATE TABLE IF NOT EXISTS test (
 );""")
 engine.execute("""INSERT INTO test(name) VALUES ('grace hopper'), ('alan turing'), ('ada lovelace');""")
 
-engine.execute("""DROP TABLE IF EXISTS guess CASCADE;""")
-engine.execute("""CREATE TABLE IF NOT EXISTS guess (
+engine.execute("""DROP TABLE IF EXISTS guesses_has CASCADE;""")
+engine.execute("""CREATE TABLE IF NOT EXISTS guesses_has (
   numguess int,
-  word text
+  guess text not null,
+  username text REFERENCES USERS(username),
+  board_id int REFERENCES GAMES(board_id)
 );""")
+
+engine.execute("""DROP TABLE IF EXISTS games CASCADE;""")
+engine.execute("""CREATE TABLE IF NOT EXISTS games (
+  board_id SERIAL,
+  word text unique not null,
+  date date not null,
+  hard boolean not null,
+  easy boolean not null,
+  CHECK ((hard is true or easy is true) and (hard is false or easy is false)),
+  PRIMARY KEY (board_id)
+);""")
+engine.execute("""INSERT INTO games(word, date, hard, easy) VALUES ('karma', '2022-04-12', true, false)""")
 
 engine.execute("""DROP TABLE IF EXISTS users CASCADE;""")
 engine.execute("""CREATE TABLE IF NOT EXISTS users (
-  username text,
+  username text primary key,
   password text,
   birthday date
+);""")
+engine.execute("""INSERT INTO users(username, password, birthday) VALUES ('ael2203@columbia.edu','wordleZ1','2000-05-22'), ('ala2201@columbia.edu', '12345', '2000-10-15');""")
+
+engine.execute("""DROP TABLE IF EXISTS follows CASCADE;""")
+engine.execute("""CREATE TABLE IF NOT EXISTS follows (
+  username text,
+  username_2 text,
+  FOREIGN KEY (username) REFERENCES users(username)
+    ON DELETE CASCADE,
+  FOREIGN KEY (username_2) REFERENCES users(username)
+    ON DELETE CASCADE,
+  PRIMARY KEY(username, username_2)
 );""")
 
 @app.route('/')
 def logon():
-  return render_template('login.html')
+  global error
+  return render_template('login.html', errorcode = error)
+
+@app.route('/logout')
+def logout():
+  global user
+  user = ""
+  return redirect('/')
 
 @app.route('/homepage')
 def homepage():
-  cursor = g.conn.execute("SELECT word FROM guess")
+  cursor = g.conn.execute("SELECT guess FROM guesses_has")
   guesses = []
   for result in cursor:
-    guesses.append(result['word'])  # can also be accessed using result[0]
+    guesses.append(result['guess'])  # can also be accessed using result[0]
   cursor.close()
 
   context = dict(data = guesses)
@@ -116,142 +153,128 @@ def teardown_request(exception):
     pass
 
 
-#
-# @app.route is a decorator around index() that means:
-#   run index() whenever the user tries to access the "/" path using a GET request
-#
-# If you wanted the user to go to e.g., localhost:8111/foobar/ with POST or GET then you could use
-#
-#       @app.route("/foobar/", methods=["POST", "GET"])
-#
-# PROTIP: (the trailing / in the path is important)
-# 
-# see for routing: http://flask.pocoo.org/docs/0.10/quickstart/#routing
-# see for decorators: http://simeonfranklin.com/blog/2012/jul/1/python-decorators-in-12-steps/
-#
-#@app.route('/')
-#def index():
-  """
-  request is a special object that Flask provides to access web request information:
-
-  request.method:   "GET" or "POST"
-  request.form:     if the browser submitted a form, this contains the data in the form
-  request.args:     dictionary of URL arguments e.g., {a:1, b:2} for http://localhost?a=1&b=2
-
-  See its API: http://flask.pocoo.org/docs/0.10/api/#incoming-request-data
-  """
-
-  # DEBUG: this is debugging code to see what request looks like
-  #print(request.args)
-
-
-  #
-  # example of a database query
-  #
-  #cursor = g.conn.execute("SELECT name FROM test")
- # guesses = []
- 
-  #for result in cursor:
-  #  names.append(result['name'])  # can also be accessed using result[0]
-  #cursor.close()
-
-  #
-  # Flask uses Jinja templates, which is an extension to HTML where you can
-  # pass data to a template and dynamically generate HTML based on the data
-  # (you can think of it as simple PHP)
-  # documentation: https://realpython.com/blog/python/primer-on-jinja-templating/
-  #
-  # You can see an example template in templates/index.html
-  #
-  # context are the variables that are passed to the template.
-  # for example, "data" key in the context variable defined below will be 
-  # accessible as a variable in index.html:
-  #
-  #     # will print: [u'grace hopper', u'alan turing', u'ada lovelace']
-  #     <div>{{data}}</div>
-  #     
-  #     # creates a <div> tag for each element in data
-  #     # will print: 
-  #     #
-  #     #   <div>grace hopper</div>
-  #     #   <div>alan turing</div>
-  #     #   <div>ada lovelace</div>
-  #     #
-  #     {% for n in data %}
-  #     <div>{{n}}</div>
-  #     {% endfor %}
-  #
-  #context = dict(data = names)
- 
-  
-
-  #
-  # render_template looks in the templates/ folder for files.
-  # for example, the below file reads template/index.html
-  #
-  #return render_template("index.html", **context)
-
-#
-# This is an example of a different path.  You can see it at
-# 
-#     localhost:8111/another
-#
-# notice that the functio name is another() rather than index()
-# the functions for each app.route needs to have different names
-#
 @app.route('/another')
 def another():
   return render_template("anotherfile.html")
 
-
-# Example of adding new data to the database
-#@app.route('/add', methods=['POST'])
-#def add():
-#  name = request.form['name']
-#  print(name)
-# cmd = 'INSERT INTO test(name) VALUES (:name1), (:name2)';
-#  g.conn.execute(text(cmd), name1 = name, name2 = name);
-# return redirect('/')
-
 @app.route('/addguess', methods=['POST'])
 def addguess():
   global num
+  global user
+  if num > 5:  
+    return redirect('/homepage')
+  date_query = """SELECT (CURRENT_DATE at time zone 'EST') as date;"""
+  date_cursor = g.conn.execute(date_query)
+  date = []
+  for result in date_cursor:
+    date.append(result['date'])
+  date_cursor.close()
+  board_query = """SELECT board_id FROM games WHERE date = %s;"""
+  board_cursor = g.conn.execute(board_query, date[0].strftime("%Y-%m-%d"))
+  board = []
+  for result in board_cursor:
+    board.append(result['board_id'])
+  board_cursor.close()
   guess = request.form['guessinput']
-  print(guess)
-  cmd = 'INSERT INTO guess(numguess,word) VALUES (:numg, :g)';
-  g.conn.execute(text(cmd), numg = num, g = guess)
+  #print(date[0].strftime("%Y-%m-%d"))
+  cmd = 'INSERT INTO guesses_has(numguess,guess,username,board_id) VALUES (:numg, :g, :user, :board)';
+  g.conn.execute(text(cmd), numg = num, g = guess, user = user, board = board[0])
   num += 1
   return redirect('/homepage')
 
+ # print(guess)
+  
+
 @app.route('/login', methods=['POST'])
 def login():
+  global error
+  global user
+  error = 0
   email = request.form['email']
   password = request.form['password']
-  print(email)
-  print(password)
-  defaultbday= '2000-01-01'
-  cmd = 'INSERT INTO users(username, password, birthday) VALUES (:user, :passw, :bday)';
-  g.conn.execute(text(cmd), user = email, passw = password, bday = defaultbday)
-  return redirect('/homepage')
+  query = """SELECT password FROM users WHERE username = %s"""
+  cursor = g.conn.execute(query, email)
+  passes = []
+  for result in cursor:
+    passes.append(result['password'])
+  cursor.close()
+  if len(passes) == 0:
+    error = 3
+    return redirect('/')
+  elif result[0] == password:
+    user = email
+    return redirect('/homepage')
+  else:
+    error = 2
+    return redirect('/')
+  
 
 @app.route('/signup')
 def signup():
-  return render_template('signin.html')
+  global error
+  return render_template('signin.html', errorcode=error)
 
 @app.route('/signin', methods=['POST'])
 def signin():
+  global error
+  error = 0
   email = request.form['email']
   password = request.form['password']
   birthday = request.form['birthday']
-  print(email)
-  print(password)
-  print(birthday)
+  #print(email)
+  #print(password)
+  #print(birthday)
   cmd = 'INSERT INTO users(username, password, birthday) VALUES (:user, :passw, :bday)';
-  g.conn.execute(text(cmd), user = email, passw = password, bday = birthday)
+  try:
+    g.conn.execute(text(cmd), user = email, passw = password, bday = birthday)
+  except Exception as er:
+    print("Cannot insert username")
+    error = 1
+    return redirect('/signup')
   return redirect('/homepage')
   
+@app.route('/search_users', methods=['POST'])
+def search_users():
+  search = request.form['searchbar']
+  #print(search)
+  query1 = """SELECT username FROM users WHERE username LIKE %s"""
+  cursor = g.conn.execute(query1, '%'+search+'%')
+  profiles = [] 
+  for result in cursor:
+    profiles.append(result['username'])
+  cursor.close()
+  #print(profiles)
+  return render_template('searchresults.html', profiles = profiles)
 
+@app.route('/profile/<people>')
+def view(people):
+  #print(people)
+  query2 = """SELECT username, birthday FROM users WHERE username = %s"""
+  cursor = g.conn.execute(query2, people)
+  data = [] 
+  for result in cursor:
+    data.append(result['username'])
+    data.append(result['birthday'])
+  cursor.close()
+  #print(data)
 
+  return render_template('profile.html',data=data)
+  
+@app.route('/follow', methods=['POST'])
+def follow():
+  global user
+  user2 = request.form['val']
+  print(user2)
+  cmd = 'INSERT INTO follows(username,username_2) VALUES (:user1, :usern2)';
+  try:
+    g.conn.execute(text(cmd), user1 = user, usern2 = user2)
+  except Exception as er:
+    print("Cannot insert username")
+    error = 1
+    return redirect('/profile/'+user2)
+  return redirect('/homepage')
+  
+  
 if __name__ == "__main__":
   import click
 

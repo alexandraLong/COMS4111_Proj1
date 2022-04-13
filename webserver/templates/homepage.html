@@ -10,22 +10,37 @@
 <body>
     <div class="container">
         <div class="row">
-            <div class="col-lg-12 bottom_row_padding">
-                <div class="top_padding center" id="header"></div>
+            <div class="col-lg-8 bottom_row_padding">
+                <div class="top_padding center" id="header">
+                </div>
                 <b class="white">Guess:</b>
             </div>
-            <div id="guess"></div>
-            <div>
-                {% for n in data %}
-                <div>{{n}}</div>
-                {% endfor %}
+            <div class="col-lg-4 logout_button">
+                    <form name="Form" action="/">
+                        <input type="submit" value="logout">
+                    </form>
+    
+                </div>
             </div>
-            <form name="Form" method="POST" action="/addguess">
-                <input name="guessinput" type="text">
-                <input id="Submit" type="submit" value="Go">
-              </form>
         </div>
+        <div class="row">
+            <div class="col-lg-12">
+                <div id="guess">
+                    <form name="Form" method="POST" action="/addguess">
+                        <input name="guessinput" type="text">
+                        <input id="Submit" type="submit" value="Go">
+                    </form>
+                </div>
+                <div id="guess">
+                    <div>
+                        {% for n in data %}
+                        <div>{{n}}</div>
+                        {% endfor %}
+                    </div>
+                </div>
+            </div>
         </div>
+
     </div>
 <body>
 {% endblock %}

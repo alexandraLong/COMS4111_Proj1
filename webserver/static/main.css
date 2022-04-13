@@ -7,3 +7,7 @@
 .white{
     color: white;
 }
+
+.logout_button{
+    position: absolute;
+}

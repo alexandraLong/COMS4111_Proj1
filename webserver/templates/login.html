@@ -14,6 +14,9 @@
             <div class="col-lg-4 bottom_row_padding">
                 <div class="top_padding center"></div>
                 <b class="white">LOGIN</b>
+                {% if errorcode == 2 or errorcode == 3 %}
+                <div>Username does not exist or password is incorrect.</div>
+                {% endif %}
                 <form name="Form" method="POST" action="/login">
                     <input name="email" type="text">
                     <input name="password" type="text"> <div></div>

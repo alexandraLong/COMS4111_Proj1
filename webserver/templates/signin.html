@@ -14,10 +14,13 @@
             <div class="col-lg-4 bottom_row_padding">
                 <div class="top_padding center"></div>
                 <b class="white">SIGN UP</b>
+                {% if errorcode == 1 %}
+                <div>Username already exists.</div>
+                {% endif %}
                 <form name="Form" method="POST" action="/signin">
                     Email: <input name="email" placeholder = 'johnnyappleseed@something.com' type="text"><br>
                     Password: <input name="password" placeholder ='xxxxx' type="text"> <br>
-                    Birthday: <input name="birthday" placeholder = 'YYYY-DD-MM' type="text"><div></div>
+                    Birthday: <input name="birthday" placeholder = 'YYYY-MM-DD' type="text"><div></div>
                     <input type="submit" value="Sign Up">
                 </form>
             </div>
