@@ -1,0 +1,42 @@
+{% extends "layout.html" %}
+
+{% block content %}
+
+<link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.2.1/css/bootstrap.min.css">
+
+<body>
+    <html>
+        <div class="container">
+            <div class="row">
+                <div class="col-lg-5">
+                    Search a squad to join!
+                </div>
+                <div class="col-lg-5">
+                    Create a squad!
+                </div>
+            </div>
+            <div class="row">
+                <div class="col-lg-5">
+                    <form name="Form" method="POST" action="/search_squad">
+                        <input name="searchsquad" placeholder="Type a squad name" type="text">
+                        <input type="submit" value="Search">
+                    </form>
+                </div>
+                <div class="col-lg-5">
+                    <form name="Form" method="POST" action="/makesquad">
+                        <input name="createsquad" placeholder="Enter a name for your squad..." type="text">
+                        <input type="submit" value="Create">
+                    </form>
+                    {% if errorcode == 4 %} 
+                    <div>Squad Name Already Exists</div>
+                    {% endif %}
+                    {% if errorcode == 5 %} 
+                    <div>Cannot join more than 1 squad!</div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+
+    </html>
+</body>
+{% endblock %}

@@ -102,6 +102,21 @@ engine.execute("""CREATE TABLE IF NOT EXISTS follows (
   PRIMARY KEY(username, username_2)
 );""")
 
+engine.execute("""DROP TABLE IF EXISTS squad CASCADE;""")
+engine.execute("""CREATE TABLE IF NOT EXISTS squad (
+  squad_name text primary key
+);""")
+
+
+engine.execute("""DROP TABLE IF EXISTS joins CASCADE;""")
+engine.execute("""CREATE TABLE IF NOT EXISTS joins (
+  username text UNIQUE REFERENCES USERS(username),
+  squad_name text REFERENCES SQUAD(squad_name),
+  date date not null,
+  PRIMARY KEY (username, squad_name)
+  );
+  """)
+
 @app.route('/')
 def logon():
   global error
@@ -112,6 +127,12 @@ def logout():
   global user
   user = ""
   return redirect('/')
+
+
+@app.route('/squads')
+def squads():
+  global error
+  return render_template('squads.html', errorcode = error)
 
 @app.route('/homepage')
 def homepage():
@@ -157,6 +178,63 @@ def teardown_request(exception):
 def another():
   return render_template("anotherfile.html")
 
+@app.route('/squad/<squad>')
+def squad(squad):
+  joins_query = 'SELECT username FROM joins WHERE squad_name = %s'
+  joins_cursor = g.conn.execute(joins_query, squad)
+  people = []
+  for results in joins_cursor:
+    people.append(results['username'])
+  joins_cursor.close()
+  return render_template('squad_profile.html', people = people)
+
+
+
+@app.route('/search_squad', methods=['POST'])
+def search_squad():
+  squadsearch = request.form['searchsquad']
+  squad_query = """SELECT squad_name FROM squad WHERE squad_name LIKE %s"""
+  squad_cursor = g.conn.execute(squad_query, '%' +squadsearch+ '%')
+  squadlist = []
+  for results in squad_cursor:
+    squadlist.append(results['squad_name'])
+  squad_cursor.close()
+  return render_template('searchsquads.html', squadlist = squadlist, name = squadsearch)
+
+@app.route('/makesquad', methods=['POST'])
+def makesquad():
+  global error
+  global user
+  error = 0
+  squadname = request.form['createsquad']
+  q = """SELECT username FROM joins WHERE username=%s"""
+  q_cursor = g.conn.execute(q, user)
+  qs = []
+  for result in q_cursor:
+    qs.append(result['username'])
+  if len(qs) > 0:
+    error = 5
+    return redirect('/squads')
+
+  cmd = 'INSERT INTO squad(squad_name) VALUES (:squad)';
+  try:
+    g.conn.execute(text(cmd), squad = squadname)
+  except Exception as er:
+    print("Squad name already exists")
+    
+    error = 4
+    return redirect('/squads')
+  date_query = """SELECT (CURRENT_DATE at time zone 'EST') as date;"""
+  date_cursor = g.conn.execute(date_query)
+  date = []
+  for result in date_cursor:
+    date.append(result['date'])
+  date_cursor.close()
+  cmd = 'INSERT INTO joins(username, squad_name, date) VALUES (:user, :squad, :date)';
+  g.conn.execute(text(cmd), user = user, squad = squadname, date = date[0].strftime("%Y-%m-%d"))
+  print(g.conn.execute("""SELECT * FROM joins"""))
+  return redirect('/squads')
+  
 @app.route('/addguess', methods=['POST'])
 def addguess():
   global num
