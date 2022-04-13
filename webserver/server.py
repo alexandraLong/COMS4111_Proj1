@@ -25,7 +25,7 @@ from flask import Flask, request, render_template, g, redirect, Response, jsonif
 tmpl_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'templates')
 app = Flask(__name__, template_folder=tmpl_dir)
 #guesses = ["     ","     ","     ","     ","     "]
-num = 0
+num = 1
 error = 0
 user = ""
 
@@ -63,11 +63,25 @@ engine.execute("""CREATE TABLE IF NOT EXISTS test (
 );""")
 engine.execute("""INSERT INTO test(name) VALUES ('grace hopper'), ('alan turing'), ('ada lovelace');""")
 
-engine.execute("""DROP TABLE IF EXISTS guess CASCADE;""")
-engine.execute("""CREATE TABLE IF NOT EXISTS guess (
+engine.execute("""DROP TABLE IF EXISTS guesses_has CASCADE;""")
+engine.execute("""CREATE TABLE IF NOT EXISTS guesses_has (
   numguess int,
-  word text
+  guess text not null,
+  username text REFERENCES USERS(username),
+  board_id int REFERENCES GAMES(board_id)
 );""")
+
+engine.execute("""DROP TABLE IF EXISTS games CASCADE;""")
+engine.execute("""CREATE TABLE IF NOT EXISTS games (
+  board_id SERIAL,
+  word text unique not null,
+  date date not null,
+  hard boolean not null,
+  easy boolean not null,
+  CHECK ((hard is true or easy is true) and (hard is false or easy is false)),
+  PRIMARY KEY (board_id)
+);""")
+engine.execute("""INSERT INTO games(word, date, hard, easy) VALUES ('karma', '2022-04-12', true, false)""")
 
 engine.execute("""DROP TABLE IF EXISTS users CASCADE;""")
 engine.execute("""CREATE TABLE IF NOT EXISTS users (
@@ -101,10 +115,10 @@ def logout():
 
 @app.route('/homepage')
 def homepage():
-  cursor = g.conn.execute("SELECT word FROM guess")
+  cursor = g.conn.execute("SELECT guess FROM guesses_has")
   guesses = []
   for result in cursor:
-    guesses.append(result['word'])  # can also be accessed using result[0]
+    guesses.append(result['guess'])  # can also be accessed using result[0]
   cursor.close()
 
   context = dict(data = guesses)
@@ -146,12 +160,30 @@ def another():
 @app.route('/addguess', methods=['POST'])
 def addguess():
   global num
+  global user
+  if num > 5:  
+    return redirect('/homepage')
+  date_query = """SELECT (CURRENT_DATE at time zone 'EST') as date;"""
+  date_cursor = g.conn.execute(date_query)
+  date = []
+  for result in date_cursor:
+    date.append(result['date'])
+  date_cursor.close()
+  board_query = """SELECT board_id FROM games WHERE date = %s;"""
+  board_cursor = g.conn.execute(board_query, date[0].strftime("%Y-%m-%d"))
+  board = []
+  for result in board_cursor:
+    board.append(result['board_id'])
+  board_cursor.close()
   guess = request.form['guessinput']
- # print(guess)
-  cmd = 'INSERT INTO guess(numguess,word) VALUES (:numg, :g)';
-  g.conn.execute(text(cmd), numg = num, g = guess)
+  #print(date[0].strftime("%Y-%m-%d"))
+  cmd = 'INSERT INTO guesses_has(numguess,guess,username,board_id) VALUES (:numg, :g, :user, :board)';
+  g.conn.execute(text(cmd), numg = num, g = guess, user = user, board = board[0])
   num += 1
   return redirect('/homepage')
+
+ # print(guess)
+  
 
 @app.route('/login', methods=['POST'])
 def login():
