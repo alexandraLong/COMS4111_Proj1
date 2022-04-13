@@ -176,13 +176,10 @@ def addguess():
     board.append(result['board_id'])
   board_cursor.close()
   guess = request.form['guessinput']
-  #print(date[0].strftime("%Y-%m-%d"))
   cmd = 'INSERT INTO guesses_has(numguess,guess,username,board_id) VALUES (:numg, :g, :user, :board)';
   g.conn.execute(text(cmd), numg = num, g = guess, user = user, board = board[0])
   num += 1
   return redirect('/homepage')
-
- # print(guess)
   
 
 @app.route('/login', methods=['POST'])
