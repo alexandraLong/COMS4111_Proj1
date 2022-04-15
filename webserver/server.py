@@ -1,4 +1,4 @@
- #!/usr/bin/env python2.7
+#!/usr/bin/env python2.7
 
 """
 Columbia W4111 Intro to databases
@@ -28,7 +28,7 @@ app = Flask(__name__, template_folder=tmpl_dir)
 num = 1
 error = 0
 user = ""
-
+board_id = 1
 
 # XXX: The Database URI should be in the format of: 
 #
@@ -44,7 +44,7 @@ user = ""
 DB_USER = "ael2203"
 DB_PASSWORD = "databasesZ1!"
 
-DB_SERVER = "w4111.cisxo09blonu.us-east-1.rds.amazonaws.com"
+DB_SERVER = "w4111project1part2db.cisxo09blonu.us-east-1.rds.amazonaws.com/proj1part2"
 
 DATABASEURI = "postgresql://"+DB_USER+":"+DB_PASSWORD+"@"+DB_SERVER+"/proj1part2"
 
@@ -56,66 +56,7 @@ engine = create_engine(DATABASEURI)
 
 
 # Here we create a test table and insert some values in it
-engine.execute("""DROP TABLE IF EXISTS test;""")
-engine.execute("""CREATE TABLE IF NOT EXISTS test (
-  id serial,
-  name text
-);""")
-engine.execute("""INSERT INTO test(name) VALUES ('grace hopper'), ('alan turing'), ('ada lovelace');""")
 
-engine.execute("""DROP TABLE IF EXISTS guesses_has CASCADE;""")
-engine.execute("""CREATE TABLE IF NOT EXISTS guesses_has (
-  numguess int,
-  guess text not null,
-  username text REFERENCES USERS(username),
-  board_id int REFERENCES GAMES(board_id)
-);""")
-
-engine.execute("""DROP TABLE IF EXISTS games CASCADE;""")
-engine.execute("""CREATE TABLE IF NOT EXISTS games (
-  board_id SERIAL,
-  word text unique not null,
-  date date not null,
-  hard boolean not null,
-  easy boolean not null,
-  CHECK ((hard is true or easy is true) and (hard is false or easy is false)),
-  PRIMARY KEY (board_id)
-);""")
-engine.execute("""INSERT INTO games(word, date, hard, easy) VALUES ('karma', '2022-04-12', true, false)""")
-
-engine.execute("""DROP TABLE IF EXISTS users CASCADE;""")
-engine.execute("""CREATE TABLE IF NOT EXISTS users (
-  username text primary key,
-  password text,
-  birthday date
-);""")
-engine.execute("""INSERT INTO users(username, password, birthday) VALUES ('ael2203@columbia.edu','wordleZ1','2000-05-22'), ('ala2201@columbia.edu', '12345', '2000-10-15');""")
-
-engine.execute("""DROP TABLE IF EXISTS follows CASCADE;""")
-engine.execute("""CREATE TABLE IF NOT EXISTS follows (
-  username text,
-  username_2 text,
-  FOREIGN KEY (username) REFERENCES users(username)
-    ON DELETE CASCADE,
-  FOREIGN KEY (username_2) REFERENCES users(username)
-    ON DELETE CASCADE,
-  PRIMARY KEY(username, username_2)
-);""")
-
-engine.execute("""DROP TABLE IF EXISTS squad CASCADE;""")
-engine.execute("""CREATE TABLE IF NOT EXISTS squad (
-  squad_name text primary key
-);""")
-
-
-engine.execute("""DROP TABLE IF EXISTS joins CASCADE;""")
-engine.execute("""CREATE TABLE IF NOT EXISTS joins (
-  username text UNIQUE REFERENCES USERS(username),
-  squad_name text REFERENCES SQUAD(squad_name),
-  date date not null,
-  PRIMARY KEY (username, squad_name)
-  );
-  """)
 
 @app.route('/')
 def logon():
@@ -136,15 +77,49 @@ def squads():
 
 @app.route('/homepage')
 def homepage():
-  cursor = g.conn.execute("SELECT guess FROM guesses_has")
+  global user
+  global board_id
+  win = False
+  date_query = """SELECT DATE('now');"""  
+  date_cursor = g.conn.execute(date_query)
+  date = []
+  for result in date_cursor:
+    date.append(result['date'])
+  date_cursor.close()
+  date = date[0].strftime("%Y-%m-%d")
+  print(date)
+  guess_query = """SELECT g.guess FROM guesses_has AS g, games AS b WHERE g.username = %s AND b.date = %s AND g.board_id = b.board_id"""
+  guess_cursor = g.conn.execute(guess_query, user, date)
   guesses = []
-  for result in cursor:
-    guesses.append(result['guess'])  # can also be accessed using result[0]
-  cursor.close()
+  for result in guess_cursor:
+    guesses.append(result['guess'].upper())  # can also be accessed using result[0]
+  guess_cursor.close()
+  #print(guesses)
+  today_word_query = """SELECT word FROM games WHERE date = %s"""
+  today_word_cursor = g.conn.execute(today_word_query, date)
+  t_word = []
+  for result in today_word_cursor:
+    t_word.append(result)
+  today_word_cursor.close()
+  t_word = t_word[0][0]
+  if guesses[-1] == t_word:
+    win = True
 
+  color = []
+  for guess in guesses:
+    row = []
+    for i in range(len(t_word)):
+      if guess[i] == t_word[i]:
+        row.append((2, t_word[i]))
+      elif guess[i] in t_word:
+        row.append((1, t_word[i]))
+      else:
+        row.append((0, t_word[i]))
+    color.append(row)
+  
   context = dict(data = guesses)
-
-  return render_template('homepage.html', **context)
+  
+  return render_template('homepage.html', **context, user = user, win=win, color = color)
 
 @app.before_request
 def before_request():
@@ -188,7 +163,29 @@ def squad(squad):
   joins_cursor.close()
   return render_template('squad_profile.html', people = people)
 
-
+@app.route('/attends', methods=['POST'])
+def attend():
+  global user
+  school = request.form['attend']
+  school.upper()
+  attends_query = 'SELECT name FROM school WHERE name = %s'
+  attends_cursor = g.conn.execute(attends_query, school)
+  schools = []
+  for results in attends_cursor:
+    schools.append(results['name'])
+  attends_cursor.close()
+  if len(schools) == 0:
+    cmd = 'INSERT INTO school(school_id,name) VALUES (DEFAULT, :name)';
+    g.conn.execute(text(cmd), name = school)
+  id_query = 'SELECT school_id FROM school WHERE name = %s'
+  id_cursor = g.conn.execute(id_query, school)
+  id = []
+  for results in id_cursor:
+    id.append(results['school_id'])
+  id_cursor.close()
+  cmd = 'INSERT INTO attends(username, school_id) VALUES (:name, :schoolid)';
+  g.conn.execute(text(cmd), name = user, schoolid = id[0])
+  return redirect('/profile/'+user)
 
 @app.route('/search_squad', methods=['POST'])
 def search_squad():
@@ -241,22 +238,47 @@ def addguess():
   global user
   if num > 5:  
     return redirect('/homepage')
-  date_query = """SELECT (CURRENT_DATE at time zone 'EST') as date;"""
+  date_query = """SELECT DATE('now');"""  
   date_cursor = g.conn.execute(date_query)
   date = []
   for result in date_cursor:
     date.append(result['date'])
   date_cursor.close()
+  date = date[0].strftime("%Y-%m-%d")
+  print(date)
   board_query = """SELECT board_id FROM games WHERE date = %s;"""
-  board_cursor = g.conn.execute(board_query, date[0].strftime("%Y-%m-%d"))
+  board_cursor = g.conn.execute(board_query, date)
   board = []
   for result in board_cursor:
     board.append(result['board_id'])
   board_cursor.close()
   guess = request.form['guessinput']
+
+  num_query = """SELECT max(numguess) as ng FROM guesses_has as gh, games as g WHERE username = %s AND gh.board_id = g.board_id AND g.date = %s;"""
+  num_query_cursor = g.conn.execute(num_query,user,date)
+  max_num = []
+  for result in num_query_cursor:
+    max_num.append(result['ng'])
+  num_query_cursor.close()
+  if max_num[0] == None:
+    num = 1
+  else:
+    num = max_num[0] + 1
   cmd = 'INSERT INTO guesses_has(numguess,guess,username,board_id) VALUES (:numg, :g, :user, :board)';
   g.conn.execute(text(cmd), numg = num, g = guess, user = user, board = board[0])
-  num += 1
+
+  #user_guesses = []
+  ##g_query = """SELECT guess FROM guesses_has as gh, games as g WHERE username = %s and AND gh.board_id = g.board_id AND g.date = %s;"""
+  #g_query_cursor = g.conn.execute(g_query,user,date)
+  #for result in g_query:
+  #  user_guesses.append(result)
+  #g_query_cursor.close()
+  #  color = []
+
+  if num == 1:
+    cmd = 'INSERT INTO plays(username, board_id) VALUES (:user, :board)';
+    g.conn.execute(text(cmd), user = user, board = board[0])
+
   return redirect('/homepage')
   
 
@@ -264,6 +286,8 @@ def addguess():
 def login():
   global error
   global user
+  global num
+  num = 1
   error = 0
   email = request.form['email']
   password = request.form['password']
@@ -323,7 +347,25 @@ def search_users():
 
 @app.route('/profile/<people>')
 def view(people):
-  #print(people)
+  global user
+  caninsert = False
+  query2 = """SELECT school_id FROM attends WHERE username = %s"""
+  cursor = g.conn.execute(query2, people)
+  schools = []
+  for result in cursor:
+    schools.append(result['school_id'])
+  cursor.close()
+  if people == user:
+    if len(schools) == 0:
+      caninsert = True
+      sname = []
+  if len(schools) != 0:
+    query2 = """SELECT name FROM school WHERE school_id = %s"""
+    cursor = g.conn.execute(query2, schools[0])
+    sname = []
+    for result in cursor:
+      sname.append(result['name'])
+    cursor.close()
   query2 = """SELECT username, birthday FROM users WHERE username = %s"""
   cursor = g.conn.execute(query2, people)
   data = [] 
@@ -332,8 +374,7 @@ def view(people):
     data.append(result['birthday'])
   cursor.close()
   #print(data)
-
-  return render_template('profile.html',data=data)
+  return render_template('profile.html',data=data, caninsert=caninsert, sname = sname)
   
 @app.route('/follow', methods=['POST'])
 def follow():

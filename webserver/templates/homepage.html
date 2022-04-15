@@ -33,9 +33,27 @@
                 </div>
                 <div id="guess">
                     <div>
-                        {% for n in data %}
-                        <div>{{n}}</div>
-                        {% endfor %}
+                        {% for row in color %}
+                            {% for number, letter in row %}
+                                {% if number == 0 %}
+                                <span class="red"> {{letter}} </span>
+                            
+
+                        <!--{% for guess in data %}
+                            {% for letter in guess %}
+                                {% if letter == 0 %}
+                                <span class="red">  </span>
+                                {% if letter == 1 %}
+                                <span class="yellow" letter> </span>
+                                {% if letter == 2 %}
+                                <span class="green" letter> </span>
+                        
+                        {% endfor %} -->
+
+                        {% if win == True %}
+                        <span> You got the WORDLE!</span> <br>
+                        {% endif %}
+                        
                     </div>
                 </div>
             </div>

@@ -14,7 +14,17 @@
                 <span> DOB: {{data[1]}} </span> <br>
                 <span> Follower Count: </span> <br>
                 <span> Average Score: </span> <br>
+                {% if sname != [] %}
+                <span> Attends: {{sname[0]}}</span> <br>
+                {% endif %}
             </div>
+            {% if caninsert == True %}
+            <form name="Form" method="POST" action="/attends">
+                <input type="text" name="attend" > 
+                <input type="submit" value="Enter">
+            </form>
+            {% endif %}
+            
         </div>
     </div>
 

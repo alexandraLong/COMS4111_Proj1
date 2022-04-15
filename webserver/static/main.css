@@ -12,6 +12,33 @@
     position: absolute;
 }
 
+.bold{
+    font-weight: bold;
+    font-size: 100px;
+}
+
+.padding{
+    margin-bottom: 100px;
+}
+.pad{
+    padding-bottom: 60px;
+}
+.bigtext{
+    font-size: 30px;
+}
+.border{
+    border-radius: 10px;
+    border-color: aliceblue;
+    border-width: 2px;
+    background-color:rgb(40, 95, 116);
+    align-items: center;
+    padding-left: 30px;
+    padding-right: 30px;
+}
+.center{
+    text-align: center;
+    align-self: center;
+}
 
 ul.no-bullets{
     list-style-type: none;
