@@ -57,11 +57,43 @@ engine = create_engine(DATABASEURI)
 
 # Here we create a test table and insert some values in it
 
+def get_date():
+  date_query = """SELECT DATE('now');"""  
+  date_cursor = g.conn.execute(date_query)
+  date = []
+  for result in date_cursor:
+    date.append(result['date'])
+  date_cursor.close()
+  date = date[0].strftime("%Y-%m-%d")
+  return date
+
+def get_current_guesses():
+  date = get_date()
+  guess_query = """SELECT g.guess FROM guesses_has AS g, games AS b WHERE g.username = %s AND b.date = %s AND g.board_id = b.board_id"""
+  guess_cursor = g.conn.execute(guess_query, user, date)
+  guesses = []
+  for result in guess_cursor:
+    guesses.append(result['guess'].upper())  # can also be accessed using result[0]
+  guess_cursor.close()
+  return guesses
+
+def get_current_word():
+    date = get_date()
+    today_word_query = """SELECT word FROM games WHERE date = %s"""
+    today_word_cursor = g.conn.execute(today_word_query, date)
+    t_word = []
+    for result in today_word_cursor:
+      t_word.append(result)
+    today_word_cursor.close()
+    t_word = t_word[0][0]
+    return t_word
+
 
 @app.route('/')
 def logon():
   global error
-  return render_template('login.html', errorcode = error)
+  global user
+  return render_template('login.html', errorcode = error, user=user)
 
 @app.route('/logout')
 def logout():
@@ -72,36 +104,17 @@ def logout():
 
 @app.route('/squads')
 def squads():
+  global user
   global error
-  return render_template('squads.html', errorcode = error)
+  return render_template('squads.html', errorcode = error, user=user)
 
 @app.route('/homepage')
 def homepage():
   global user
   global board_id
   win = False
-  date_query = """SELECT DATE('now');"""  
-  date_cursor = g.conn.execute(date_query)
-  date = []
-  for result in date_cursor:
-    date.append(result['date'])
-  date_cursor.close()
-  date = date[0].strftime("%Y-%m-%d")
-  print(date)
-  guess_query = """SELECT g.guess FROM guesses_has AS g, games AS b WHERE g.username = %s AND b.date = %s AND g.board_id = b.board_id"""
-  guess_cursor = g.conn.execute(guess_query, user, date)
-  guesses = []
-  for result in guess_cursor:
-    guesses.append(result['guess'].upper())  # can also be accessed using result[0]
-  guess_cursor.close()
-  #print(guesses)
-  today_word_query = """SELECT word FROM games WHERE date = %s"""
-  today_word_cursor = g.conn.execute(today_word_query, date)
-  t_word = []
-  for result in today_word_cursor:
-    t_word.append(result)
-  today_word_cursor.close()
-  t_word = t_word[0][0]
+  guesses = get_current_guesses()
+  t_word = get_current_word()
   if len(guesses) != 0:
     if guesses[-1] == t_word:
       win = True
@@ -111,11 +124,11 @@ def homepage():
     row = []
     for i in range(len(t_word)):
       if guess[i] == t_word[i]:
-        row.append((2, t_word[i]))
+        row.append((2, guess[i]))
       elif guess[i] in t_word:
-        row.append((1, t_word[i]))
+        row.append((1, guess[i]))
       else:
-        row.append((0, t_word[i]))
+        row.append((0, guess[i]))
     color.append(row)
   
   context = dict(data = guesses)
@@ -149,20 +162,16 @@ def teardown_request(exception):
   except Exception as e:
     pass
 
-
-@app.route('/another')
-def another():
-  return render_template("anotherfile.html")
-
 @app.route('/squad/<squad>')
 def squad(squad):
+  global user
   joins_query = 'SELECT username FROM joins WHERE squad_name = %s'
   joins_cursor = g.conn.execute(joins_query, squad)
   people = []
   for results in joins_cursor:
     people.append(results['username'])
   joins_cursor.close()
-  return render_template('squad_profile.html', people = people)
+  return render_template('squad_profile.html', people = people, user=user)
 
 @app.route('/attends', methods=['POST'])
 def attend():
@@ -190,6 +199,7 @@ def attend():
 
 @app.route('/search_squad', methods=['POST'])
 def search_squad():
+  global user
   squadsearch = request.form['searchsquad']
   squad_query = """SELECT squad_name FROM squad WHERE squad_name LIKE %s"""
   squad_cursor = g.conn.execute(squad_query, '%' +squadsearch+ '%')
@@ -197,7 +207,7 @@ def search_squad():
   for results in squad_cursor:
     squadlist.append(results['squad_name'])
   squad_cursor.close()
-  return render_template('searchsquads.html', squadlist = squadlist, name = squadsearch)
+  return render_template('searchsquads.html', squadlist = squadlist, name = squadsearch, user=user)
 
 @app.route('/makesquad', methods=['POST'])
 def makesquad():
@@ -222,14 +232,9 @@ def makesquad():
     
     error = 4
     return redirect('/squads')
-  date_query = """SELECT (CURRENT_DATE at time zone 'EST') as date;"""
-  date_cursor = g.conn.execute(date_query)
-  date = []
-  for result in date_cursor:
-    date.append(result['date'])
-  date_cursor.close()
+  date = get_date()
   cmd = 'INSERT INTO joins(username, squad_name, date) VALUES (:user, :squad, :date)';
-  g.conn.execute(text(cmd), user = user, squad = squadname, date = date[0].strftime("%Y-%m-%d"))
+  g.conn.execute(text(cmd), user = user, squad = squadname, date = date)
   print(g.conn.execute("""SELECT * FROM joins"""))
   return redirect('/squads')
   
@@ -239,14 +244,12 @@ def addguess():
   global user
   if num > 5:  
     return redirect('/homepage')
-  date_query = """SELECT DATE('now');"""  
-  date_cursor = g.conn.execute(date_query)
-  date = []
-  for result in date_cursor:
-    date.append(result['date'])
-  date_cursor.close()
-  date = date[0].strftime("%Y-%m-%d")
-  print(date)
+  guesses = get_current_guesses()
+  t_word = get_current_word()
+  if len(guesses) != 0:
+    if guesses[-1] == t_word:
+      return redirect('/homepage')
+  date = get_date()
   board_query = """SELECT board_id FROM games WHERE date = %s;"""
   board_cursor = g.conn.execute(board_query, date)
   board = []
@@ -254,7 +257,8 @@ def addguess():
     board.append(result['board_id'])
   board_cursor.close()
   guess = request.form['guessinput']
-
+  if len(guess) != 5:
+    return redirect('/homepage')
   num_query = """SELECT max(numguess) as ng FROM guesses_has as gh, games as g WHERE username = %s AND gh.board_id = g.board_id AND g.date = %s;"""
   num_query_cursor = g.conn.execute(num_query,user,date)
   max_num = []
@@ -267,15 +271,6 @@ def addguess():
     num = max_num[0] + 1
   cmd = 'INSERT INTO guesses_has(numguess,guess,username,board_id) VALUES (:numg, :g, :user, :board)';
   g.conn.execute(text(cmd), numg = num, g = guess, user = user, board = board[0])
-
-  #user_guesses = []
-  ##g_query = """SELECT guess FROM guesses_has as gh, games as g WHERE username = %s and AND gh.board_id = g.board_id AND g.date = %s;"""
-  #g_query_cursor = g.conn.execute(g_query,user,date)
-  #for result in g_query:
-  #  user_guesses.append(result)
-  #g_query_cursor.close()
-  #  color = []
-
   if num == 1:
     cmd = 'INSERT INTO plays(username, board_id) VALUES (:user, :board)';
     g.conn.execute(text(cmd), user = user, board = board[0])
@@ -321,9 +316,6 @@ def signin():
   email = request.form['email']
   password = request.form['password']
   birthday = request.form['birthday']
-  #print(email)
-  #print(password)
-  #print(birthday)
   cmd = 'INSERT INTO users(username, password, birthday) VALUES (:user, :passw, :bday)';
   try:
     g.conn.execute(text(cmd), user = email, passw = password, bday = birthday)
@@ -335,6 +327,7 @@ def signin():
   
 @app.route('/search_users', methods=['POST'])
 def search_users():
+  global user
   search = request.form['searchbar']
   #print(search)
   query1 = """SELECT username FROM users WHERE username LIKE %s"""
@@ -344,7 +337,7 @@ def search_users():
     profiles.append(result['username'])
   cursor.close()
   #print(profiles)
-  return render_template('searchresults.html', profiles = profiles)
+  return render_template('searchresults.html', profiles = profiles, user=user)
 
 @app.route('/profile/<people>')
 def view(people):
@@ -353,6 +346,7 @@ def view(people):
   query2 = """SELECT school_id FROM attends WHERE username = %s"""
   cursor = g.conn.execute(query2, people)
   schools = []
+  sname = []
   for result in cursor:
     schools.append(result['school_id'])
   cursor.close()
@@ -375,7 +369,7 @@ def view(people):
     data.append(result['birthday'])
   cursor.close()
   #print(data)
-  return render_template('profile.html',data=data, caninsert=caninsert, sname = sname)
+  return render_template('profile.html',data=data, caninsert=caninsert, sname = sname,user=user)
   
 @app.route('/follow', methods=['POST'])
 def follow():
@@ -386,8 +380,8 @@ def follow():
   try:
     g.conn.execute(text(cmd), user1 = user, usern2 = user2)
   except Exception as er:
-    print("Cannot insert username")
-    error = 1
+    print("Cannot follow")
+    #error = 1
     return redirect('/profile/'+user2)
   return redirect('/homepage')
   
