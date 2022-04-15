@@ -45,19 +45,8 @@
                                 <span class="green"> {{letter}} </span>
                                 {% endif %}
                             {% endfor %}
+                            <br>
                         {% endfor %}
-
-
-                        <!--{% for guess in data %}
-                            {% for letter in guess %}
-                                {% if letter == 0 %}
-                                <span class="red">  </span>
-                                {% if letter == 1 %}
-                                <span class="yellow" letter> </span>
-                                {% if letter == 2 %}
-                                <span class="green" letter> </span>
-                        
-                        {% endfor %} -->
 
                         {% if win == True %}
                         <span> You got the WORDLE!</span> <br>
