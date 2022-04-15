@@ -47,3 +47,15 @@ ul.no-bullets{
     display: inline-block;
     
 }
+
+.red{
+    color: red;
+}
+
+.yellow{
+    color: yellow;
+}
+
+.green{
+    color: green;
+}

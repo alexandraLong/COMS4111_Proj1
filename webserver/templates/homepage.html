@@ -37,7 +37,16 @@
                             {% for number, letter in row %}
                                 {% if number == 0 %}
                                 <span class="red"> {{letter}} </span>
-                            
+                                {% endif %}
+                                {% if number == 1 %}
+                                <span class="yellow"> {{letter}} </span>
+                                {% endif %}
+                                {% if number == 2 %}
+                                <span class="green"> {{letter}} </span>
+                                {% endif %}
+                            {% endfor %}
+                        {% endfor %}
+
 
                         <!--{% for guess in data %}
                             {% for letter in guess %}

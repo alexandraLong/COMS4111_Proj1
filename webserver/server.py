@@ -102,8 +102,9 @@ def homepage():
     t_word.append(result)
   today_word_cursor.close()
   t_word = t_word[0][0]
-  if guesses[-1] == t_word:
-    win = True
+  if len(guesses) != 0:
+    if guesses[-1] == t_word:
+      win = True
 
   color = []
   for guess in guesses:
