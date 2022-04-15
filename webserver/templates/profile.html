@@ -9,18 +9,20 @@
 <body>
     <div class="container">
         <div class="row">
-            <div class="col-lg-12">
+            <div class="col-lg-12 white">
                 <span> {{data[0]}} </span> <br>
                 <span> DOB: {{data[1]}} </span> <br>
-                <span> Follower Count: </span> <br>
-                <span> Average Score: </span> <br>
+                <span> Follower Count: {{followers}}</span> <br>
+                <span> Total Puzzles Solved: {{completed}} </span> <br>
+                <span> Average Score: {{avg}}</span> <br>
+                <span> Streak: {{streak}} </span> <br>
                 {% if sname != [] %}
                 <span> Attends: {{sname[0]}}</span> <br>
                 {% endif %}
             </div>
             {% if caninsert == True %}
             <form name="Form" method="POST" action="/attends">
-                <input type="text" name="attend" > 
+                <input type="text" name="attend" placeholder="Enter University name"> 
                 <input type="submit" value="Enter">
             </form>
             {% endif %}

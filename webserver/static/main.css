@@ -47,6 +47,27 @@
 .bigpad{
     margin-bottom: 100px;
 }
+.letterborderR{
+    border-color: aliceblue;
+    border-width: 2px;
+    background-color:red;
+    font-weight: 30px;
+    padding: 20px;
+}
+.letterborderG{
+    border-color: aliceblue;
+    border-width: 2px;
+    background-color:green;
+    font-weight: 30px;
+    padding: 20px;
+}
+.letterborderY{
+    border-color: aliceblue;
+    border-width: 2px;
+    background-color:yellow;
+    font-weight: 30px;
+    padding: 20px;
+}
 .padmore{
     width: 100%;
 }
@@ -72,14 +93,3 @@ ul.no-bullets{
     justify-content: center;
     align-items: center;
   }
-  
-.red{
-    color: red;
-}
-.yellow{
-    color: yellow;
-}
-
-.green{
-    color: green;
-}

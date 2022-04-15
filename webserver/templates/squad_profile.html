@@ -9,12 +9,20 @@
 <body>
     <div class="container">
         <div class="col-lg-12">
-            <ul class="no-bullets">
+            <span class="big white"> Members: </span><br>
+            <ul class="no-bullets white">
                 {% for person in people %}
                 <li> {{person}}</li>
                 {% endfor %}
             </ul>
         </div>
+        <form name="Form" method="POST" action="/join_squad">
+            <input type="hidden" name="joinsquad" value={{squad}}> 
+            <input type="submit" value="Join squad!">
+        </form>
+        {% if errorcode == 7 %}
+            <span>Could not join squad</span> 
+        {% endif %}
     </div>
 
 </body>

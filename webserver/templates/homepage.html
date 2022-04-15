@@ -24,25 +24,30 @@
                         <input id="Submit" type="submit" value="Go">
                     </form>
                 </div>
+                <div class="bigpad"></div>
                 <div id="guess">
                     <div>
                         {% for row in color %}
                             {% for number, letter in row %}
                                 {% if number == 0 %}
-                                <span class="red"> {{letter}} </span>
+                                <span class="letterborderR">&nbsp {{letter}} &nbsp</span>
                                 {% endif %}
                                 {% if number == 1 %}
-                                <span class="yellow"> {{letter}} </span>
+                                <span class="letterborderY">&nbsp {{letter}} &nbsp</span>
                                 {% endif %}
                                 {% if number == 2 %}
-                                <span class="green"> {{letter}} </span>
+                                <span class="letterborderG">&nbsp {{letter}} &nbsp</span>
                                 {% endif %}
                             {% endfor %}
-                            <br>
+                            <br><br><br>
                         {% endfor %}
 
                         {% if win == True %}
-                        <span> You got the WORDLE!</span> <br>
+                        <span> <b class="white">You got the WORDLE!</b></span> <br>
+                        {% endif %}
+                        {% if lost == True %}
+                        <span> <b class="white">You lost :(</b></span> <br>
+                        <span> <b class="white">The word was: {{word}}</b></span> <br>
                         {% endif %}
                         
                     </div>
@@ -55,6 +60,23 @@
                 <input type="submit" value="logout">
             </form>
 
+        </div>
+        <div>
+            {% if errorcode == 6 %}
+            <span>User does not exist</span> 
+            {% endif %}
+        <form name="Form" method="POST" action="/share">
+            <input name="share" type="text" placeholder="Type user to share with...">
+            <input type="submit" value="Share">
+          </form>
+        </div>
+        <br><br>
+        <div class="row bigpad">
+            <div class="col-lg-12 white">
+                {% for username, bid in shared %}
+                <div>{{username}} got the WORDLE! (Board {{bid}})</div>
+                {% endfor %}
+            </div>
         </div>
     </div>
     </div>
